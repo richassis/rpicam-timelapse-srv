@@ -1,5 +1,7 @@
 import io
-import picamera2
+from picamera2 import Picamera2
+from picamera2.encoders import JpegEncoder
+from picamera2.outputs import FileOutput
 from flask import Flask, Response, send_from_directory
 import time
 import os
@@ -11,12 +13,33 @@ import os
 # import random
 # import os
 
+buffer = io.BytesIO()
+picam2 = Picamera2()
+picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}, controls={"FrameDurationLimits": (40000, 40000)}))
+output = FileOutput(buffer)
+
+
 app = Flask(__name__)
 
 import time
 
+def generate_frames2():
+    picam2.start_recording(JpegEncoder(), FileOutput(output))
+    
+    while True:
+        buffer.seek(0)
+
+        yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.read() + b'\r\n'
+
+        buffer.seek(0)
+        buffer.truncate()
+        time.sleep(1/23)
+
+
+from PIL import Image
+
 def generate_frames():
-    picam2 = picamera2.Picamera2()
+    picam2 = Picamera2()
     config = picam2.create_video_configuration(main={"size": (640, 480)})
     picam2.configure(config)
     picam2.start()
@@ -28,8 +51,12 @@ def generate_frames():
         while True:
             frame = picam2.capture_array()
             stream = io.BytesIO()
-            from PIL import Image
             img = Image.fromarray(frame)
+
+            # Converte para RGB se necessário
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
             img.save(stream, format='JPEG')
             stream.seek(0)
 
@@ -166,7 +193,7 @@ def take_photo():
 @app.route('/video_feed')
 def video_feed():
     # Retorna o stream de imagens gerado pela função generate_frames
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_frames2(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/photos_list')
 def photos_list():
