@@ -24,7 +24,7 @@ app = Flask(__name__)
 import time
 
 def generate_frames2():
-    picam2.start_recording(JpegEncoder(), FileOutput(output))
+    picam2.start_recording(JpegEncoder(), output)
     
     while True:
         buffer.seek(0)
