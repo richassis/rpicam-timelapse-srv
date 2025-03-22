@@ -1,15 +1,38 @@
-# import io
-# import picamera2
-# from flask import Flask, Response
-
 import io
-from flask import Flask, Response, send_from_directory
-from PIL import Image, ImageDraw
-import time
-import random
-import os
+import picamera2
+from flask import Flask, Response
+
+# import io
+# from flask import Flask, Response, send_from_directory
+# from PIL import Image, ImageDraw
+# import time
+# import random
+# import os
 
 app = Flask(__name__)
+
+def generate_frames():
+    picam2 = picamera2.Picamera2()
+    config = picam2.create_video_configuration(main={"size": (640, 480)})
+    picam2.configure(config)
+    picam2.start()
+
+    try:
+        while True:
+            # Captura um frame como um array numpy
+            frame = picam2.capture_array()
+
+            # Converte o frame para JPEG
+            stream = io.BytesIO()
+            from PIL import Image
+            img = Image.fromarray(frame)
+            img.save(stream, format='JPEG')
+            stream.seek(0)
+
+            # Gera o frame no formato esperado
+            yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
+    finally:
+        picam2.stop()
 
 # def generate_frames():
 #     with picamera.PiCamera() as camera:
@@ -24,25 +47,25 @@ app = Flask(__name__)
 #             stream.truncate()
 
 
-def generate_frames():
-    while True:
-        # Cria uma imagem simulada com cor de fundo aleatória
-        bg_color = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
-        img = Image.new('RGB', (640, 480), color=bg_color)
-        draw = ImageDraw.Draw(img)
+# def generate_frames():
+#     while True:
+#         # Cria uma imagem simulada com cor de fundo aleatória
+#         bg_color = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
+#         img = Image.new('RGB', (640, 480), color=bg_color)
+#         draw = ImageDraw.Draw(img)
 
-        # Adiciona um timestamp
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        draw.text((10, 10), f"Simulated Frame - {timestamp}", fill=(255, 255, 255))
+#         # Adiciona um timestamp
+#         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+#         draw.text((10, 10), f"Simulated Frame - {timestamp}", fill=(255, 255, 255))
 
-        # Salva a imagem em um buffer
-        stream = io.BytesIO()
-        img.save(stream, format='JPEG')
-        stream.seek(0)
+#         # Salva a imagem em um buffer
+#         stream = io.BytesIO()
+#         img.save(stream, format='JPEG')
+#         stream.seek(0)
 
-        # Gera o frame no formato esperado
-        yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
-        time.sleep(1 / 24)  # Simula 24 FPS
+#         # Gera o frame no formato esperado
+#         yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
+#         time.sleep(1 / 24)  # Simula 24 FPS
 
 
 

@@ -5,26 +5,26 @@
 # Note: needs simplejpeg to be installed (pip3 install simplejpeg).
 
 
-# import io
-# import logging
-# import socketserver
-# from http import server
-# from threading import Condition
-# from picamera2 import Picamera2
-# from picamera2.encoders import JpegEncoder
-# from picamera2.outputs import FileOutput
-
-
-##TESTE COM IMAGEM##
-import time
-from PIL import Image
 import io
 import logging
 import socketserver
-import threading
-from threading import Condition
-import random
 from http import server
+from threading import Condition
+from picamera2 import Picamera2
+from picamera2.encoders import JpegEncoder
+from picamera2.outputs import FileOutput
+
+
+##TESTE COM IMAGEM##
+# import time
+# from PIL import Image
+# import io
+# import logging
+# import socketserver
+# import threading
+# from threading import Condition
+# import random
+# from http import server
 ##TESTE COM IMAGEM##
 
 PAGE = """\
@@ -99,50 +99,50 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 
 ##TESTE COM IMAGEM##
-def generate_fake_frame():
-    """Generate a fake JPEG frame with random colors."""
-    # Gera uma cor RGB aleatória
-    random_color = (
-        int(random.random() * 255),  # Red
-        int(random.random() * 255),  # Green
-        int(random.random() * 255)   # Blue
-    )
-    img = Image.new('RGB', (640, 480), random_color)  # Imagem com cor aleatória
-    buf = io.BytesIO()
-    img.save(buf, format='JPEG')
-    return buf.getvalue()
+# def generate_fake_frame():
+#     """Generate a fake JPEG frame with random colors."""
+#     # Gera uma cor RGB aleatória
+#     random_color = (
+#         int(random.random() * 255),  # Red
+#         int(random.random() * 255),  # Green
+#         int(random.random() * 255)   # Blue
+#     )
+#     img = Image.new('RGB', (640, 480), random_color)  # Imagem com cor aleatória
+#     buf = io.BytesIO()
+#     img.save(buf, format='JPEG')
+#     return buf.getvalue()
 
-# Simulate frame generation in a separate thread
-def simulate_frames():
-    while True:
-        frame = generate_fake_frame()
-        output.write(frame)
-        time.sleep(0.2)  # Reduz FPS para 5
+# # Simulate frame generation in a separate thread
+# def simulate_frames():
+#     while True:
+#         frame = generate_fake_frame()
+#         output.write(frame)
+#         time.sleep(0.2)  # Reduz FPS para 5
    
-output = StreamingOutput()
-
-try:
-    address = ('', 5000)
-    server = StreamingServer(address, StreamingHandler)
-    threading.Thread(target=simulate_frames, daemon=True).start()
-
-    print("Server running at http://<this-ip-address>:8000")
-    server.serve_forever()
-finally:
-    print("Server stopped.")
-##TESTE COM IMAGEM##
-
-
-
-
-# picam2 = Picamera2()
-# picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
 # output = StreamingOutput()
-# picam2.start_recording(JpegEncoder(), FileOutput(output))
 
 # try:
-#     address = ('', 8000)
+#     address = ('', 5000)
 #     server = StreamingServer(address, StreamingHandler)
+#     threading.Thread(target=simulate_frames, daemon=True).start()
+
+#     print("Server running at http://<this-ip-address>:8000")
 #     server.serve_forever()
 # finally:
-#     picam2.stop_recording()
+#     print("Server stopped.")
+# ##TESTE COM IMAGEM##
+
+
+
+
+picam2 = Picamera2()
+picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
+output = StreamingOutput()
+picam2.start_recording(JpegEncoder(), FileOutput(output))
+
+try:
+    address = ('', 8000)
+    server = StreamingServer(address, StreamingHandler)
+    server.serve_forever()
+finally:
+    picam2.stop_recording()
