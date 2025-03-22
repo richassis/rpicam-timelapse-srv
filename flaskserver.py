@@ -1,6 +1,8 @@
 import io
 import picamera2
-from flask import Flask, Response
+from flask import Flask, Response, send_from_directory
+import time
+import os
 
 # import io
 # from flask import Flask, Response, send_from_directory
@@ -11,26 +13,34 @@ from flask import Flask, Response
 
 app = Flask(__name__)
 
+import time
+
 def generate_frames():
     picam2 = picamera2.Picamera2()
     config = picam2.create_video_configuration(main={"size": (640, 480)})
     picam2.configure(config)
     picam2.start()
 
+    frame_count = 0
+    start_time = time.time()
+
     try:
         while True:
-            # Captura um frame como um array numpy
             frame = picam2.capture_array()
-
-            # Converte o frame para JPEG
             stream = io.BytesIO()
             from PIL import Image
             img = Image.fromarray(frame)
             img.save(stream, format='JPEG')
             stream.seek(0)
 
-            # Gera o frame no formato esperado
             yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
+
+            frame_count += 1
+            elapsed_time = time.time() - start_time
+            if elapsed_time > 5:  # Calcula o FPS a cada 5 segundos
+                print(f"FPS: {frame_count / elapsed_time:.2f}")
+                frame_count = 0
+                start_time = time.time()
     finally:
         picam2.stop()
 
