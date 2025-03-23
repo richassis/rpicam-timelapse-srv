@@ -1,115 +1,135 @@
-import io
-from picamera2 import Picamera2
-from picamera2.encoders import JpegEncoder
-from picamera2.outputs import FileOutput
+from picamera2.encoders import JpegEncoder, H264Encoder
 from flask import Flask, Response, send_from_directory
+from picamera2.outputs import FileOutput
+from libcamera import ColorSpace
+from picamera2 import Picamera2
+from threading import Condition, Thread
+from PIL import Image
 import time
+import io
 import os
 
-# import io
-# from flask import Flask, Response, send_from_directory
-# from PIL import Image, ImageDraw
-# import time
-# import random
-# import os
+class StreamingOutput(io.BufferedIOBase):
+    def __init__(self):
+        self.frame = None
+        self.condition = Condition()
 
-buffer = io.BytesIO()
-picam2 = Picamera2()
-picam2.configure(picam2.create_video_configuration(main={"size": (3280, 2464)}, lores={"size": (640,480)}, encode="lores"))# controls={"FrameDurationLimits": (40000, 40000)}
-output = FileOutput(buffer)
+    def write(self, buf):
+        with self.condition:
+            self.frame = buf
+            self.condition.notify_all()
 
 
-app = Flask(__name__)
+class Camera():
 
-import time
+    def __init__(self):
+        
+        self.picam2 = Picamera2()
+        self.live_size = (640,480)
+        self.photo_size = (3280,2464)
 
-def generate_frames2():
-    picam2.start_recording(JpegEncoder(), output, name=)
-    
-    while True:
-        buffer.seek(0)
+        self.locked = False
 
-        yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.read() + b'\r\n'
+        self.buffer = None
+        self.output = StreamingOutput()
 
-        buffer.seek(0)
-        buffer.truncate()
-        time.sleep(1/23)
+        self.video_config = self.picam2.create_video_configuration(main={"size": self.live_size}, encode="main", controls={"FrameDurationLimits": (40000, 40000)}, colour_space=ColorSpace.Sycc())
+        self.still_config = self.picam2.create_still_configuration(main={"size": self.photo_size})
 
+        self.picam2.configure(self.video_config)
 
-from PIL import Image
+        self.timelapse_interval = 30
+        
+        
+    def generate_frames(self):
 
-def generate_frames():
-    picam2 = Picamera2()
-    config = picam2.create_video_configuration(main={"size": (640, 480)})
-    picam2.configure(config)
-    picam2.start()
+        self.picam2.start_recording(JpegEncoder(), FileOutput(self.output))
 
-    frame_count = 0
-    start_time = time.time()
+        self.start_timelapse()        
 
-    try:
         while True:
-            frame = picam2.capture_array()
+
+            if self.locked: 
+                print("camera live locked")
+                time.sleep(.5)
+                continue
+
+            with self.output.condition:
+                self.output.condition.wait()
+                self.buffer = io.BytesIO(self.output.frame)
+
+            # Verifica se o buffer contém dados
+            if self.buffer.getbuffer().nbytes == 0:
+                print("Buffer vazio, aguardando dados...")
+                time.sleep(0.1)
+                continue
+
+            try:
+                frame = Image.open(self.buffer).convert('RGB')
+            except Exception as e:
+                print(f"Erro ao abrir a imagem: {e}")
+                self.buffer.seek(0)
+                self.buffer.truncate()
+                continue
+            
             stream = io.BytesIO()
-            img = Image.fromarray(frame)
-
-            # Converte para RGB se necessário
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-
-            img.save(stream, format='JPEG')
+            frame.save(stream, format='JPEG')
             stream.seek(0)
 
             yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
 
-            frame_count += 1
-            elapsed_time = time.time() - start_time
-            if elapsed_time > 5:  # Calcula o FPS a cada 5 segundos
-                print(f"FPS: {frame_count / elapsed_time:.2f}")
-                frame_count = 0
-                start_time = time.time()
-    finally:
-        picam2.stop()
+            self.buffer.seek(0)
+            self.buffer.truncate()
+            # time.sleep(1/23)
 
-# def generate_frames():
-#     with picamera.PiCamera() as camera:
-#         camera.resolution = (640, 480)
-#         camera.framerate = 24
-#         stream = io.BytesIO()
+    def start_timelapse(self):
 
-#         for _ in camera.capture_continuous(stream, 'jpeg', use_video_port=True):
-#             stream.seek(0)
-#             yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
-#             stream.seek(0)
-#             stream.truncate()
+        thread = Thread(target=self.timelapse, daemon=True)
+        thread.start()
+
+    def timelapse(self):
+        while True:
+            time.sleep(self.timelapse_interval) 
+            self.capture_photo()
 
 
-# def generate_frames():
-#     while True:
-#         # Cria uma imagem simulada com cor de fundo aleatória
-#         bg_color = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
-#         img = Image.new('RGB', (640, 480), color=bg_color)
-#         draw = ImageDraw.Draw(img)
+    def capture_photo(self):
 
-#         # Adiciona um timestamp
-#         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-#         draw.text((10, 10), f"Simulated Frame - {timestamp}", fill=(255, 255, 255))
+        if self.locked: return
 
-#         # Salva a imagem em um buffer
-#         stream = io.BytesIO()
-#         img.save(stream, format='JPEG')
-#         stream.seek(0)
+        self.locked = True
+        self.picam2.stop_recording()
 
-#         # Gera o frame no formato esperado
-#         yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + stream.read() + b'\r\n'
-#         time.sleep(1 / 24)  # Simula 24 FPS
+        try:
+            self.picam2.switch_mode(self.still_config)
+            request = self.picam2.capture_request()
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"{timestamp}.jpg"
 
+            photos_dir = "photos"  # Diretório onde as fotos serão salvas
+            os.makedirs(photos_dir, exist_ok=True)  # Garante que o diretório existe
+            filename = os.path.join(photos_dir, f"{timestamp}.jpg")  # Caminho completo do arquivo
+            request.save("main", filename)
+            request.release()
+
+            print("Foto capturada!")  # Apenas para demonstração
+        finally:
+            self.picam2.switch_mode(self.video_config)
+            self.picam2.start_recording(JpegEncoder(), FileOutput(self.output))
+            self.locked = False
+
+
+
+
+picam2 = Camera() 
+
+app = Flask(__name__)
 
 
 def get_list_of_photos(pathname):
     photos_path = os.path.abspath(pathname)
     if not os.path.exists(photos_path) or not os.path.isdir(photos_path):
-        return None
+        raise FileNotFoundError(f"O diretório '{pathname}' não existe ou não é um diretório válido.")
     
     return [f for f in os.listdir(photos_path) if os.path.isfile(os.path.join(photos_path, f))]
 
@@ -186,27 +206,24 @@ def index():
 
 @app.route('/take_photo', methods=['POST'])
 def take_photo():
-    request = picam2.capture_request()
-    request.save("main", "test.jpg")
-    request.release()
-    print("Still image captured!")
+    picam2.capture_photo()
 
-    print("Foto capturada!")  # Apenas para demonstração
     return "Foto capturada com sucesso!", 200
 
 @app.route('/video_feed')
 def video_feed():
     # Retorna o stream de imagens gerado pela função generate_frames
-    return Response(generate_frames2(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(picam2.generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/photos_list')
 def photos_list():
     # Retorna a lista de fotos no diretório "photos"
-    list = get_list_of_photos('photos')
-
-    if not list: 
-        print("ERROR: Photos directory not found")
-        return "ERROR: Photos directory not found!", 300
+    
+    try:
+        list = get_list_of_photos('photos')
+    except Exception as e:
+        print(str(e))
+        list=None
 
     # Gera uma página HTML com a lista de arquivos
     html_content = """
@@ -330,9 +347,6 @@ def serve_photo(filename):
     </body>
     </html>
     """
-
-
-
 
 
 
