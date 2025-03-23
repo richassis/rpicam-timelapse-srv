@@ -15,7 +15,7 @@ import os
 
 buffer = io.BytesIO()
 picam2 = Picamera2()
-picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}, controls={"FrameDurationLimits": (40000, 40000)}))
+picam2.configure(picam2.create_video_configuration(main={"size": (3280, 2464)}, lores={"size": (640,480)}, encode="lores"))# controls={"FrameDurationLimits": (40000, 40000)}
 output = FileOutput(buffer)
 
 
@@ -24,7 +24,7 @@ app = Flask(__name__)
 import time
 
 def generate_frames2():
-    picam2.start_recording(JpegEncoder(), output)
+    picam2.start_recording(JpegEncoder(), output, name=)
     
     while True:
         buffer.seek(0)
@@ -186,7 +186,11 @@ def index():
 
 @app.route('/take_photo', methods=['POST'])
 def take_photo():
-    # Aqui você pode adicionar a lógica para salvar uma imagem ou executar outra ação
+    request = picam2.capture_request()
+    request.save("main", "test.jpg")
+    request.release()
+    print("Still image captured!")
+
     print("Foto capturada!")  # Apenas para demonstração
     return "Foto capturada com sucesso!", 200
 
