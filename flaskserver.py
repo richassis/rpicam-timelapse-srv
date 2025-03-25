@@ -38,7 +38,7 @@ class Camera():
 
         self.picam2.configure(self.video_config)
 
-        self.timelapse_interval = 30
+        self.timelapse_interval = 30*60
         
         
     def generate_frames(self):
