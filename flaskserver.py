@@ -24,7 +24,11 @@ class Camera():
 
     def __init__(self):
         
-        self.picam2 = Picamera2()
+        try:
+            self.picam2 = Picamera2()
+        except:
+            self.picam2 = None
+
         self.live_size = (640,480)
         self.photo_size = (3280,2464)
 
@@ -33,10 +37,12 @@ class Camera():
         self.buffer = None
         self.output = StreamingOutput()
 
-        self.video_config = self.picam2.create_video_configuration(main={"size": self.live_size}, encode="main", controls={"FrameDurationLimits": (40000, 40000)}, colour_space=ColorSpace.Sycc())
-        self.still_config = self.picam2.create_still_configuration(main={"size": self.photo_size})
+        if self.picam2:
 
-        self.picam2.configure(self.video_config)
+            self.video_config = self.picam2.create_video_configuration(main={"size": self.live_size}, encode="main", controls={"FrameDurationLimits": (40000, 40000)}, colour_space=ColorSpace.Sycc())
+            self.still_config = self.picam2.create_still_configuration(main={"size": self.photo_size})
+
+            self.picam2.configure(self.video_config)
 
         self.timelapse_interval = 30*60
         
@@ -214,9 +220,13 @@ def take_photo():
 
 @app.route('/video_feed')
 def video_feed():
-    # Retorna o stream de imagens gerado pela função generate_frames
-    return Response(picam2.generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
+    if picam2.picam2 is None:
+        # Retorna uma mensagem de erro em texto simples se a câmera não estiver disponível
+        return Response("Erro: Nenhuma câmera encontrada.", mimetype='text/plain')
+    else:
+        # Retorna o stream de imagens gerado pela função generate_frames
+        return Response(picam2.generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    
 @app.route('/photos_list')
 def photos_list():
     # Retorna a lista de fotos no diretório "photos"
