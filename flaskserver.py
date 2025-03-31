@@ -131,7 +131,9 @@ def get_list_of_photos(pathname):
     if not os.path.exists(photos_path) or not os.path.isdir(photos_path):
         raise FileNotFoundError(f"O diretório '{pathname}' não existe ou não é um diretório válido.")
     
-    return [f for f in os.listdir(photos_path) if os.path.isfile(os.path.join(photos_path, f))]
+    return sorted(
+        [f for f in os.listdir(photos_path) if os.path.isfile(os.path.join(photos_path, f))]
+    )
 
 
 
