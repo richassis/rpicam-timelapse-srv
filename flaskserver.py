@@ -45,13 +45,14 @@ class Camera():
             self.picam2.configure(self.video_config)
 
         self.timelapse_interval = 30*60
-        
+        self.timelapse_thread = None  # Armazena a thread de timelapse
+        self.timelapse_running = False  # Indica se o timelapse está ativo
         
     def generate_frames(self):
+        if not self.timelapse_running:  # Garante que o timelapse seja iniciado apenas uma vez
+            self.start_timelapse()
 
         self.picam2.start_recording(JpegEncoder(), FileOutput(self.output))
-
-        self.start_timelapse()        
 
         while True:
 
@@ -89,15 +90,20 @@ class Camera():
             # time.sleep(1/23)
 
     def start_timelapse(self):
-
-        thread = Thread(target=self.timelapse, daemon=True)
-        thread.start()
+        if not self.timelapse_running:  # Verifica se o timelapse já está ativo
+            self.timelapse_running = True
+            self.timelapse_thread = Thread(target=self.timelapse, daemon=True)
+            self.timelapse_thread.start()
 
     def timelapse(self):
-        while True:
-            time.sleep(self.timelapse_interval) 
+        while self.timelapse_running:
+            time.sleep(self.timelapse_interval)
             self.capture_photo()
 
+    def stop_timelapse(self):
+        self.timelapse_running = False
+        if self.timelapse_thread:
+            self.timelapse_thread.join()
 
     def capture_photo(self):
 
