@@ -400,6 +400,10 @@ def set_time():
     except Exception as e:
         print(f"Erro ao ajustar o horário: {e}")
         return "Erro ao ajustar o horário.", 500
+    
+
+#sudo visudo
+#pi ALL=(ALL) NOPASSWD: /bin/date
 
 
 if __name__ == '__main__':
