@@ -8,6 +8,7 @@ from PIL import Image
 import time
 import io
 import os
+import pwd
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
@@ -132,12 +133,16 @@ class Camera():
 
 
 
-
 picam2 = Camera() 
 
 app = Flask(__name__)
 
-current_user = os.getlogin()
+# Obter o nome do usuário de forma robusta
+try:
+    current_user = os.getenv("USER") or os.getenv("LOGNAME") or pwd.getpwuid(os.getuid()).pw_name
+except Exception as e:
+    current_user = "STIHL"  # Valor padrão em caso de erro
+    print(f"Erro ao obter o nome do usuário: {e}")
 
 def get_list_of_photos(pathname):
     photos_path = os.path.abspath(pathname)
