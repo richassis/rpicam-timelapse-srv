@@ -33,8 +33,6 @@ class Camera():
         self.live_size = (640,480)
         self.photo_size = (3280,2464)
 
-        self.time = 
-
         self.locked = False
 
         self.buffer = None
