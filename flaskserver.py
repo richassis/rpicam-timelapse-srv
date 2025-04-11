@@ -158,6 +158,9 @@ def get_list_of_photos(pathname):
 
 @app.route('/')
 def index():
+    # Obtém o horário local do Raspberry
+    local_time = time.strftime("%Y-%m-%d %H:%M:%S")
+
     return f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -228,6 +231,7 @@ def index():
         <button onclick="takePhoto()">Capturar Foto</button>
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
         <br><br>
+        <p><strong>Horário local do Raspberry:</strong> {local_time}</p>
         <form action="/set_time" method="POST">
             <label for="datetime">Ajustar horário:</label>
             <input type="datetime-local" id="datetime" name="datetime" required>
