@@ -137,6 +137,7 @@ picam2 = Camera()
 
 app = Flask(__name__)
 
+current_user = os.getlogin()
 
 def get_list_of_photos(pathname):
     photos_path = os.path.abspath(pathname)
@@ -144,15 +145,15 @@ def get_list_of_photos(pathname):
         raise FileNotFoundError(f"O diretório '{pathname}' não existe ou não é um diretório válido.")
     
     return sorted(
-        [f for f in os.listdir(photos_path) if os.path.isfile(os.path.join(photos_path, f))]
+        [f for f in os.listdir(photos_path) if os.path.isfile(os.path.join(photos_path, f))],
+        reverse=True  # Ordena de forma decrescente
     )
 
 
 
 @app.route('/')
 def index():
-    # Página HTML que inclui o stream de vídeo, botão para capturar foto e botão para visualizar lista de fotos
-    return """
+    return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -160,16 +161,16 @@ def index():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Simulação de Câmera</title>
         <style>
-            body {
+            body {{
                 font-family: Arial, sans-serif;
                 margin: 20px;
                 background-color: #f4f4f9;
                 text-align: center;
-            }
-            h1 {
+            }}
+            h1 {{
                 color: #333;
-            }
-            button {
+            }}
+            button {{
                 margin: 10px;
                 padding: 10px 20px;
                 font-size: 16px;
@@ -178,39 +179,39 @@ def index():
                 border: none;
                 border-radius: 5px;
                 cursor: pointer;
-            }
-            button:hover {
+            }}
+            button:hover {{
                 background-color: #0056b3;
-            }
-            img {
-                max-width: 100%;
+            }}
+            img {{
+                width: 100%;
+                max-width: 640px;
                 height: auto;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
+                border: 1px solid black;
+                object-fit: contain;
+            }}
         </style>
         <script>
-            function takePhoto() {
-                fetch('/take_photo', { method: 'POST' })
-                    .then(response => {
-                        if (response.ok) {
+            function takePhoto() {{
+                fetch('/take_photo', {{ method: 'POST' }})
+                    .then(response => {{
+                        if (response.ok) {{
                             alert('Foto capturada com sucesso!');
-                        } else {
+                        }} else {{
                             alert('Erro ao capturar a foto.');
-                        }
-                    })
-                    .catch(error => {
+                        }}
+                    }})
+                    .catch(error => {{
                         console.error('Erro:', error);
                         alert('Erro ao capturar a foto.');
-                    });
-            }
+                    }});
+            }}
         </script>
     </head>
     <body>
         <h1>Simulação de Câmera</h1>
         <p>O feed de vídeo está abaixo:</p>
-        <img src="/video_feed" alt="Video Feed" style="width: 640px; height: 480px; border: 1px solid black;">
+        <img src="/video_feed" alt="Video Feed">
         <br><br>
         <button onclick="takePhoto()">Capturar Foto</button>
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
@@ -236,12 +237,11 @@ def video_feed():
 @app.route('/photos_list')
 def photos_list():
     # Retorna a lista de fotos no diretório "photos"
-    
     try:
         list = get_list_of_photos('photos')
     except Exception as e:
         print(str(e))
-        list=None
+        list = None
 
     # Gera uma página HTML com a lista de arquivos
     html_content = """
@@ -300,7 +300,7 @@ def photos_list():
         <ul>
     """
     for photo in list:
-        html_content += f'<li><a href="/photos/{photo}" target="_blank">{photo}</a></li>'
+        html_content += f'<li><a href="/photos/{photo}">{photo}</a></li>'
     
     html_content += """
         </ul>
@@ -320,7 +320,6 @@ def serve_photo_raw(filename):
 @app.route('/photos/<filename>')
 def serve_photo(filename):
     # Serve uma página HTML que exibe a foto e inclui um botão para voltar
-    photos_path = os.path.abspath('photos')
     return f"""
     <!DOCTYPE html>
     <html lang="en">
