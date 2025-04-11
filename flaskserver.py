@@ -159,7 +159,7 @@ def index():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Simulação de Câmera</title>
+        <title>Setup de captura {current_user}</title>
         <style>
             body {{
                 font-family: Arial, sans-serif;
@@ -209,8 +209,8 @@ def index():
         </script>
     </head>
     <body>
-        <h1>Simulação de Câmera</h1>
-        <p>O feed de vídeo está abaixo:</p>
+        <h1>Setup de captura {current_user}</h1>
+        <p>Visualização da câmera:</p>
         <img src="/video_feed" alt="Video Feed">
         <br><br>
         <button onclick="takePhoto()">Capturar Foto</button>
