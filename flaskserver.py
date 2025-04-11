@@ -221,6 +221,32 @@ def index():
                         alert('Erro ao capturar a foto.');
                     }});
             }}
+
+            function setTime() {{
+                const datetime = document.getElementById('datetime').value;
+                if (!datetime) {{
+                    alert('Por favor, insira uma data e hora válidas.');
+                    return;
+                }}
+                fetch('/set_time', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }},
+                    body: `datetime=${encodeURIComponent(datetime)}`
+                }})
+                .then(response => {{
+                    if (response.ok) {{
+                        alert('Horário ajustado com sucesso!');
+                    }} else {{
+                        alert('Erro ao ajustar o horário.');
+                    }}
+                }})
+                .catch(error => {{
+                    console.error('Erro:', error);
+                    alert('Erro ao ajustar o horário.');
+                }});
+            }}
         </script>
     </head>
     <body>
@@ -232,11 +258,11 @@ def index():
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
         <br><br>
         <p><strong>Horário local do Raspberry:</strong> {local_time}</p>
-        <form action="/set_time" method="POST">
+        <div>
             <label for="datetime">Ajustar horário:</label>
             <input type="datetime-local" id="datetime" name="datetime" required>
-            <button type="submit">Ajustar</button>
-        </form>
+            <button onclick="setTime()">Ajustar</button>
+        </div>
     </body>
     </html>
     """
