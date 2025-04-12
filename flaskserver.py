@@ -233,7 +233,7 @@ def index():
                     headers: {{
                         'Content-Type': 'application/x-www-form-urlencoded',
                     }},
-                    body: `datetime=${encodeURIComponent(datetime)}`
+                    body: `datetime=${{encodeURIComponent(datetime)}}`
                 }})
                 .then(response => {{
                     if (response.ok) {{
