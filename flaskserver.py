@@ -238,6 +238,7 @@ def index():
                 .then(response => {{
                     if (response.ok) {{
                         alert('Horário ajustado com sucesso!');
+                        location.reload(); // Recarrega a página após o sucesso
                     }} else {{
                         alert('Erro ao ajustar o horário.');
                     }}
