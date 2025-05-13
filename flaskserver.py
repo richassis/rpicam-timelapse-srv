@@ -158,6 +158,9 @@ def get_list_of_photos(pathname):
 
 @app.route('/')
 def index():
+    # Obtém o horário local do Raspberry
+    local_time = time.strftime("%Y-%m-%d %H:%M:%S")
+
     return f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -195,6 +198,13 @@ def index():
                 border: 1px solid black;
                 object-fit: contain;
             }}
+            form {{
+                margin-top: 20px;
+            }}
+            input[type="datetime-local"] {{
+                padding: 10px;
+                font-size: 16px;
+            }}
         </style>
         <script>
             function takePhoto() {{
@@ -211,6 +221,33 @@ def index():
                         alert('Erro ao capturar a foto.');
                     }});
             }}
+
+            function setTime() {{
+                const datetime = document.getElementById('datetime').value;
+                if (!datetime) {{
+                    alert('Por favor, insira uma data e hora válidas.');
+                    return;
+                }}
+                fetch('/set_time', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }},
+                    body: `datetime=${{encodeURIComponent(datetime)}}`
+                }})
+                .then(response => {{
+                    if (response.ok) {{
+                        alert('Horário ajustado com sucesso!');
+                        location.reload(); // Recarrega a página após o sucesso
+                    }} else {{
+                        alert('Erro ao ajustar o horário.');
+                    }}
+                }})
+                .catch(error => {{
+                    console.error('Erro:', error);
+                    alert('Erro ao ajustar o horário.');
+                }});
+            }}
         </script>
     </head>
     <body>
@@ -220,6 +257,13 @@ def index():
         <br><br>
         <button onclick="takePhoto()">Capturar Foto</button>
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
+        <br><br>
+        <p><strong>Horário local do Raspberry:</strong> {local_time}</p>
+        <div>
+            <label for="datetime">Ajustar horário:</label>
+            <input type="datetime-local" id="datetime" name="datetime" required>
+            <button onclick="setTime()">Ajustar</button>
+        </div>
     </body>
     </html>
     """
@@ -370,6 +414,25 @@ def serve_photo(filename):
     </html>
     """
 
+@app.route('/set_time', methods=['POST'])
+def set_time():
+    from flask import request
+    datetime_str = request.form.get('datetime')  # Obtém o valor do formulário
+    try:
+        # Converte o valor recebido para o formato esperado pelo comando `date`
+        datetime_obj = time.strptime(datetime_str, "%Y-%m-%dT%H:%M")
+        formatted_time = time.strftime("%m%d%H%M%Y.%S", datetime_obj)
+
+        # Ajusta o horário do sistema
+        os.system(f"sudo date {formatted_time}")
+        return "Horário ajustado com sucesso!", 200
+    except Exception as e:
+        print(f"Erro ao ajustar o horário: {e}")
+        return "Erro ao ajustar o horário.", 500
+    
+
+#sudo visudo
+#pi ALL=(ALL) NOPASSWD: /bin/date
 
 
 if __name__ == '__main__':
