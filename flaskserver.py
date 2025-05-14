@@ -51,7 +51,7 @@ def index():
     if most_recent_photo:
         photo_html = f"""
         <div>
-            <h2>Última Foto</h2>
+            <h2>Última foto tirada:</strong> {last_photo_time}</h2>
             <img src="/photos_raw/{most_recent_photo}" alt="Última Foto" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
         </div>
         """
@@ -100,7 +100,6 @@ def index():
     </head>
     <body>
         <h1>Setup de captura {current_user}</h1>
-        <p><strong>Última foto tirada:</strong> {last_photo_time}</p>
         {photo_html}
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
         <br><br>
