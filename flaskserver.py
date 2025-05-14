@@ -23,19 +23,22 @@ def get_list_of_photos(pathname):
 
 def get_last_photo_time(most_recent_photo):
     """
-    Recebe o nome da foto mais recente no formato 'YYYYMMDD_hhmmss' e retorna o horário formatado.
+    Recebe o nome da foto mais recente no formato 'YYYYMMDD_hhmmss.jpg' e retorna o horário formatado.
     """
     try:
         # Verifica se o nome da foto está no formato esperado
         if not most_recent_photo or len(most_recent_photo) < 15:
             return "Formato inválido ou nenhuma foto disponível."
 
+        # Remove a extensão do arquivo, se existir
+        most_recent_photo = os.path.splitext(most_recent_photo)[0]
+
         # Extrai a data e hora do nome da foto
         date_str = most_recent_photo.split('_')[0]  # Parte 'YYYYMMDD'
         time_str = most_recent_photo.split('_')[1]  # Parte 'hhmmss'
 
         # Concatena e converte para o formato desejado
-        datetime_str = f"{date_str} {time_str[:2]}:{time_str[2:4]}:{time_str[4:]}"
+        datetime_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]} {time_str[:2]}:{time_str[2:4]}:{time_str[4:]}"
         return datetime_str
     except Exception as e:
         print(f"Erro ao processar o horário da foto: {e}")
