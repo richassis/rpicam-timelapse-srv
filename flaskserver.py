@@ -1,7 +1,6 @@
 from flask import Flask, send_from_directory, request
 import os
 import time
-import json
 
 app = Flask(__name__)
 
@@ -22,13 +21,25 @@ def get_list_of_photos(pathname):
         reverse=True  # Ordena de forma decrescente
     )
 
-def get_last_photo_time():
+def get_last_photo_time(most_recent_photo):
+    """
+    Recebe o nome da foto mais recente no formato 'YYYYMMDD_hhmmss' e retorna o horário formatado.
+    """
     try:
-        with open("last_photo.json", "r") as json_file:
-            data = json.load(json_file)
-            return data.get("last_photo_time", "Nenhuma foto tirada ainda.")
-    except FileNotFoundError:
-        return "Nenhuma foto tirada ainda."
+        # Verifica se o nome da foto está no formato esperado
+        if not most_recent_photo or len(most_recent_photo) < 15:
+            return "Formato inválido ou nenhuma foto disponível."
+
+        # Extrai a data e hora do nome da foto
+        date_str = most_recent_photo.split('_')[0]  # Parte 'YYYYMMDD'
+        time_str = most_recent_photo.split('_')[1]  # Parte 'hhmmss'
+
+        # Concatena e converte para o formato desejado
+        datetime_str = f"{date_str} {time_str[:2]}:{time_str[2:4]}:{time_str[4:]}"
+        return datetime_str
+    except Exception as e:
+        print(f"Erro ao processar o horário da foto: {e}")
+        return "Erro ao processar o horário da foto."
 
 def get_most_recent_photo(pathname):
     try:
@@ -44,8 +55,8 @@ def get_most_recent_photo(pathname):
 def index():
     # Obtém o horário local do Raspberry
     local_time = time.strftime("%Y-%m-%d %H:%M:%S")
-    last_photo_time = get_last_photo_time()  # Obtém o horário da última foto
     most_recent_photo = get_most_recent_photo('photos')  # Obtém a foto mais recente
+    last_photo_time = get_last_photo_time(most_recent_photo)  # Obtém o horário da última foto
 
     photo_html = ""
     if most_recent_photo:

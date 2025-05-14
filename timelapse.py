@@ -1,7 +1,6 @@
 from picamera2 import Picamera2
 import time
 import os
-import json  # Para salvar o horário da última foto
 
 class Camera():
 
@@ -37,16 +36,9 @@ class Camera():
             self.picam2.stop()
 
             print(f"Foto capturada: {filename}")
-
-            # Salva o horário da última foto no JSON
-            self.save_last_photo_time(timestamp_readable)
         except Exception as e:
             print(f"Erro ao capturar foto: {e}")
 
-    def save_last_photo_time(self, timestamp):
-        data = {"last_photo_time": timestamp}
-        with open("last_photo.json", "w") as json_file:
-            json.dump(data, json_file, indent=4)
 
 if __name__ == "__main__":
     camera = Camera()
