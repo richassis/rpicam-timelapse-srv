@@ -10,7 +10,7 @@ class Camera():
         self.photo_size = (3280, 2464)
         self.still_config = self.picam2.create_still_configuration(main={"size": self.photo_size})
         self.picam2.configure(self.still_config)
-        self.timelapse_interval = 30 * 60  # Intervalo de 30 minutos
+        self.timelapse_interval = 5 * 60  # Intervalo de 5 minutos
 
     def timelapse(self):
         print("Timelapse iniciado. Pressione Ctrl+C para finalizar.")

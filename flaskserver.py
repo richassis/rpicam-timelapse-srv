@@ -29,12 +29,35 @@ def get_last_photo_time():
             return data.get("last_photo_time", "Nenhuma foto tirada ainda.")
     except FileNotFoundError:
         return "Nenhuma foto tirada ainda."
+
+def get_most_recent_photo(pathname):
+    try:
+        photos = get_list_of_photos(pathname)
+        if photos:
+            return photos[0]  # Retorna a foto mais recente
+        return None
+    except Exception as e:
+        print(f"Erro ao obter a foto mais recente: {e}")
+        return None
     
 @app.route('/')
 def index():
     # Obtém o horário local do Raspberry
     local_time = time.strftime("%Y-%m-%d %H:%M:%S")
     last_photo_time = get_last_photo_time()  # Obtém o horário da última foto
+    most_recent_photo = get_most_recent_photo('photos')  # Obtém a foto mais recente
+
+    photo_html = ""
+    if most_recent_photo:
+        photo_html = f"""
+        <div>
+            <h2>Última Foto</h2>
+            <img src="/photos_raw/{most_recent_photo}" alt="Última Foto" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+        </div>
+        """
+    else:
+        photo_html = "<p><strong>Nenhuma foto disponível no momento.</strong></p>"
+
 
     return f"""
     <!DOCTYPE html>
@@ -78,6 +101,7 @@ def index():
     <body>
         <h1>Setup de captura {current_user}</h1>
         <p><strong>Última foto tirada:</strong> {last_photo_time}</p>
+        {photo_html}
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
         <br><br>
         <p><strong>Horário local do Raspberry:</strong> {local_time}</p>
