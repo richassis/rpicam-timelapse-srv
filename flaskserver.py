@@ -1,6 +1,8 @@
 from flask import Flask, send_from_directory, request
 import os
 import time
+import shutil
+import tempfile
 
 app = Flask(__name__)
 
@@ -117,6 +119,8 @@ def index():
         {photo_html}
         <button onclick="window.location.href='/photos_list'">Visualizar Lista de Fotos</button>
         <br><br>
+        <button onclick="window.location.href='/download_select'">Download de Fotos</button>
+        <br><br>
         <p><strong>Horário local do Raspberry:</strong> {local_time}</p>
         <div>
             <label for="datetime">Ajustar horário:</label>
@@ -154,6 +158,122 @@ def index():
     </body>
     </html>
     """
+@app.route('/download_select')
+def download_select():
+    # Página para selecionar o número de fotos a serem incluídas no arquivo zip
+    num_photos = request.args.get('num_photos', type=int)  # Obtém o número de fotos do request, se disponível
+    num_photos_value = num_photos if num_photos and num_photos > 0 else 100  # Define o valor inicial do campo
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Selecionar Fotos para Download</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                background-color: #f4f4f9;
+                text-align: center;
+            }}
+            h1 {{
+                color: #333;
+            }}
+            form {{
+                margin-top: 20px;
+            }}
+            input[type="number"] {{
+                padding: 10px;
+                font-size: 16px;
+                width: 100px;
+                display: none; /* Oculta o campo inicialmente */
+            }}
+            label[for="num_photos"] {{
+                display: none; /* Oculta o label inicialmente */
+            }}
+            button {{
+                margin: 10px;
+                padding: 10px 20px;
+                font-size: 16px;
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }}
+            button:hover {{
+                background-color: #0056b3;
+            }}
+        </style>
+        <script>
+            function toggleNumPhotos() {{
+                const checkbox = document.getElementById('select_all');
+                const numPhotosInput = document.getElementById('num_photos');
+                const numPhotosLabel = document.querySelector('label[for="num_photos"]');
+                const isChecked = checkbox.checked;
+
+                numPhotosInput.style.display = isChecked ? 'none' : 'inline-block';
+                numPhotosLabel.style.display = isChecked ? 'none' : 'inline-block';
+
+                if (isChecked) {{
+                    numPhotosInput.value = ''; // Limpa o campo quando "Selecionar todas" está marcado
+                }} else {{
+                    numPhotosInput.value = 100; // Define o valor padrão
+                }}
+            }}
+        </script>
+    </head>
+    <body>
+        <h1>Selecionar Fotos para Download</h1>
+        <form action="/download_photos" method="get">
+            <label>
+                <input type="checkbox" id="select_all" name="select_all" checked onchange="toggleNumPhotos()"> Selecionar todas as fotos
+            </label>
+            <br><br>
+            <label for="num_photos">Número de fotos:</label>
+            <input type="number" id="num_photos" name="num_photos" min="1" value="{num_photos_value}">
+            <br><br>
+            <button type="submit">Download</button>
+        </form>
+        <button onclick="window.location.href='/'">Voltar para a Página Inicial</button>
+    </body>
+    </html>
+    """
+
+@app.route('/download_photos')
+def download_photos():
+    # Verifica se o checkbox "Selecionar todas" foi marcado
+    select_all = request.args.get('select_all', type=str) == 'on'
+    num_photos = None if select_all else request.args.get('num_photos', type=int)
+
+    photos_path = os.path.abspath('photos')
+    if not os.path.exists(photos_path) or not os.path.isdir(photos_path):
+        return "O diretório 'photos' não existe ou não é um diretório válido.", 404
+
+    try:
+        # Obtém todas as fotos ou as mais recentes com base no número solicitado
+        photos = get_list_of_photos(photos_path) if select_all else get_list_of_photos(photos_path)[:num_photos]
+        if not photos:
+            return "Nenhuma foto disponível para download.", 404
+
+        # Cria um arquivo zip temporário com as fotos selecionadas
+        temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+        temp_zip.close()
+
+        zip_name = f"{current_user}_collection"  # Nome do arquivo zip baseado no usuário atual
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for photo in photos:
+                shutil.copy(os.path.join(photos_path, photo), temp_dir)
+            shutil.make_archive(os.path.join(os.path.dirname(temp_zip.name), zip_name), 'zip', temp_dir)
+
+        return send_from_directory(os.path.dirname(temp_zip.name), f"{zip_name}.zip", as_attachment=True)
+    except Exception as e:
+        print(f"Erro ao criar o arquivo zip: {e}")
+        return "Erro ao criar o arquivo zip.", 500
+
 
 @app.route('/set_time', methods=['POST'])
 def set_time():
